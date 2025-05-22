@@ -48,3 +48,41 @@ async def create_note(req: Request):
 
     # 5. Devolvemos el ID del documento recién creado
     return {"id": ref.id}
+
+@app.put("/notes/{note_id}")
+async def update_note(note_id: str, req: Request):
+    # 1. Validamos que el ID de la nota no esté vacío
+    if not note_id:
+        raise HTTPException(status_code=400, detail="ID de nota vacío")
+    # 1. Leemos el JSON del cuerpo de la petición
+    data = await req.json()
+    # 2. Validamos que existan los campos obligatorios 'title' y 'content'
+    if not data.get("title") or not data.get("content"):
+        raise HTTPException(status_code=400, detail="Faltan 'title' o 'content'")
+    
+    docs = db.collection("notes").document(note_id).set(
+        {
+            "title": data["title"],
+            "content": data["content"],
+            # SERVER_TIMESTAMP inserta la fecha/hora actual del servidor
+            "created_at": firestore.SERVER_TIMESTAMP
+        },
+        merge=True  # merge=True para actualizar solo los campos especificados
+    )
+
+    if not docs:
+        raise HTTPException(status_code=404, detail="Nota no encontrada")
+    
+    return {"answer": "La nota " + note_id + " ha sido actualizada"}
+
+
+@app.delete("/notes/{note_id}")
+async def delete_note(note_id: str):
+    # 1. Validamos que el ID de la nota no esté vacío
+    if not note_id:
+        raise HTTPException(status_code=400, detail="ID de nota vacío")
+    
+    # 2. Eliminamos el documento con el ID especificado
+    db.collection("notes").document(note_id).delete()
+    
+    return {"answer": "La nota " + note_id + " ha sido eliminada"}              
